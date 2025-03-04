@@ -69,6 +69,7 @@
 
         // Start Recording
         startRecordBtn.addEventListener('click', () => {
+            console.log('Start recording button clicked'); // Debugging line
             navigator.mediaDevices.getUserMedia({ audio: true })
                 .then(stream => {
                     mediaRecorder = new MediaRecorder(stream);
@@ -93,6 +94,7 @@
 
         // Stop Recording
         stopRecordBtn.addEventListener('click', () => {
+            console.log('Stop recording button clicked'); // Debugging line
             mediaRecorder.stop();
             startRecordBtn.disabled = false;
             stopRecordBtn.disabled = true;
