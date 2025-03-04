@@ -69,28 +69,37 @@
 
         // Start Recording
         startRecordBtn.addEventListener('click', () => {
-            console.log('Start recording button clicked'); // Debugging line
-            navigator.mediaDevices.getUserMedia({ audio: true })
-                .then(stream => {
-                    mediaRecorder = new MediaRecorder(stream);
-                    mediaRecorder.ondataavailable = event => {
-                        audioChunks.push(event.data);
-                    };
-                    mediaRecorder.onstop = () => {
-                        const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-                        const audioUrl = URL.createObjectURL(audioBlob);
-                        audioPlayer.src = audioUrl;
-                        uploadAudioToS3(audioBlob); // Upload the recorded audio to S3
-                    };
-                    mediaRecorder.start();
-                    startRecordBtn.disabled = true;
-                    stopRecordBtn.disabled = false;
-                    playRecordBtn.disabled = true;
-                })
-                .catch(error => {
+        console.log('Start recording button clicked');
+        navigator.mediaDevices.getUserMedia({ audio: true })
+            .then(stream => {
+                console.log('Microphone access granted');
+                mediaRecorder = new MediaRecorder(stream);
+                mediaRecorder.ondataavailable = event => {
+                    console.log('Data available');
+                    audioChunks.push(event.data);
+                };
+                mediaRecorder.onstop = () => {
+                    console.log('Recording stopped');
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                    const audioUrl = URL.createObjectURL(audioBlob);
+                    audioPlayer.src = audioUrl;
+                    uploadAudioToS3(audioBlob);  // Upload the recorded audio to S3
+                };
+                mediaRecorder.start();
+                console.log('Recording started');
+                startRecordBtn.disabled = true;
+                stopRecordBtn.disabled = false;
+                playRecordBtn.disabled = true;
+            })
+            .catch(error => {
+                if (error.name === 'NotFoundError') {
+                    console.error('Microphone not found. Please check your microphone settings and permissions.');
+                } else {
                     console.error('Error accessing the microphone:', error);
-                });
-        });
+                }
+            });
+    });
+
 
         // Stop Recording
         stopRecordBtn.addEventListener('click', () => {
