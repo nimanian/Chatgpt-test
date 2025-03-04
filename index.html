@@ -76,7 +76,7 @@
 
         // Start Recording for AWS Services
         startRecordBtn.addEventListener('click', () => {
-            console.log('Start recording button clicked');
+            console.log('Start recording button clicked (AWS)');
             navigator.mediaDevices.getUserMedia({ audio: true })
                 .then(stream => {
                     console.log('Microphone access granted');
@@ -105,7 +105,7 @@
 
         // Stop Recording for AWS Services
         stopRecordBtn.addEventListener('click', () => {
-            console.log('Stop recording button clicked');
+            console.log('Stop recording button clicked (AWS)');
             mediaRecorder.stop();
             startRecordBtn.disabled = false;
             stopRecordBtn.disabled = true;
@@ -138,60 +138,6 @@
             });
         }
 
-        // Start a Transcription Job
-        function startTranscriptionJob(s3AudioUri) {
-            const params = {
-                TranscriptionJobName: `job-${Date.now()}`,
-                LanguageCode: 'en-US',
-                Media: {
-                    MediaFileUri: s3AudioUri // Audio URI from S3
-                },
-                OutputBucketName: 'pm-chatgpt-test' // Output bucket for transcription results
-            };
-
-            transcribe.startTranscriptionJob(params, function(err, data) {
-                if (err) {
-                    console.log('Error starting transcription job:', err);
-                } else {
-                    console.log('Transcription job started:', data);
-                    getTranscriptionResult(data.TranscriptionJobName); // Fetch transcription result
-                }
-            });
-        }
-
-        // Fetch Transcription Result and update the transcript text box
-        function getTranscriptionResult(jobName) {
-            const params = {
-                TranscriptionJobName: jobName
-            };
-
-            transcribe.getTranscriptionJob(params, function(err, data) {
-                if (err) {
-                    console.log('Error getting transcription result:', err);
-                } else {
-                    console.log('Transcription result:', data);
-                    if (data.TranscriptionJob.TranscriptionJobStatus === 'COMPLETED') {
-                        // Get the URL of the transcription result (JSON format)
-                        const transcriptUrl = data.TranscriptionJob.Transcript.TranscriptFileUri;
-                        fetchTranscriptAndDisplay(transcriptUrl);
-                    }
-                }
-            });
-        }
-
-        // Fetch the transcript and display it in the text box
-        function fetchTranscriptAndDisplay(url) {
-            fetch(url)
-                .then(response => response.json())
-                .then(data => {
-                    const transcriptText = data.results.transcripts[0].transcript;
-                    transcriptTextBox.value = transcriptText; // Display the transcript in the textarea
-                })
-                .catch(error => {
-                    console.log('Error fetching transcript:', error);
-                });
-        }
-
         // Simple Start Recording (without AWS services)
         const simpleStartRecordBtn = document.getElementById('simpleStartRecord');
         const simpleStopRecordBtn = document.getElementById('simpleStopRecord');
@@ -212,6 +158,7 @@
                         audioPlayer.src = audioUrl;
                     };
                     simpleMediaRecorder.start();
+                    console.log('Simple recording started');
                     simpleStartRecordBtn.disabled = true;
                     simpleStopRecordBtn.disabled = false;
                 })
