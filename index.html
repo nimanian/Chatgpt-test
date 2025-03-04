@@ -33,6 +33,8 @@
             <button id="startRecord">Start Recording</button>
             <button id="stopRecord" disabled>Stop Recording</button>
             <button id="playRecord" disabled>Play Recording</button>
+            <br><br>
+            <textarea id="transcript" placeholder="Transcription will appear here..." rows="10" cols="50"></textarea>
             <audio id="audioPlayer" controls></audio>
         </section>
     </main>
@@ -63,6 +65,7 @@
         const stopRecordBtn = document.getElementById('stopRecord');
         const playRecordBtn = document.getElementById('playRecord');
         const audioPlayer = document.getElementById('audioPlayer');
+        const transcriptTextBox = document.getElementById('transcript');
 
         // Start Recording
         startRecordBtn.addEventListener('click', () => {
@@ -138,8 +141,42 @@
                     console.log('Error starting transcription job:', err);
                 } else {
                     console.log('Transcription job started:', data);
+                    getTranscriptionResult(data.TranscriptionJobName); // Fetch transcription result
                 }
             });
+        }
+
+        // Fetch Transcription Result and update the transcript text box
+        function getTranscriptionResult(jobName) {
+            const params = {
+                TranscriptionJobName: jobName
+            };
+
+            transcribe.getTranscriptionJob(params, function(err, data) {
+                if (err) {
+                    console.log('Error getting transcription result:', err);
+                } else {
+                    console.log('Transcription result:', data);
+                    if (data.TranscriptionJob.TranscriptionJobStatus === 'COMPLETED') {
+                        // Get the URL of the transcription result (JSON format)
+                        const transcriptUrl = data.TranscriptionJob.Transcript.TranscriptFileUri;
+                        fetchTranscriptAndDisplay(transcriptUrl);
+                    }
+                }
+            });
+        }
+
+        // Fetch the transcript and display it in the text box
+        function fetchTranscriptAndDisplay(url) {
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    const transcriptText = data.results.transcripts[0].transcript;
+                    transcriptTextBox.value = transcriptText; // Display the transcript in the textarea
+                })
+                .catch(error => {
+                    console.log('Error fetching transcript:', error);
+                });
         }
     </script>
 </body>
