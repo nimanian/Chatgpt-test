@@ -56,6 +56,7 @@
             <button id="stopRecord" disabled>Stop Recording</button>
             <button id="playRecord" disabled>Play Recording</button>
             <br><br>
+            <textarea id="transcript" placeholder="Transcription will appear here..." rows="10" cols="50"></textarea>
             <audio id="audioPlayer" controls></audio>
         </section>
     </main>
@@ -65,15 +66,28 @@
         <p>&copy; 2025 Dr-Inovates. All rights reserved.</p>
     </footer>
 
-    <!-- Voice Recording Script -->
+    <!-- AWS SDK & Voice Recording Script -->
+    <script src="https://sdk.amazonaws.com/js/aws-sdk-2.947.0.min.js"></script>
     <script>
-        // Initialize variables
+        // AWS Configuration - Update with your credentials
+        AWS.config.update({
+            region: 'ap-southeast-2', // Your AWS region
+            credentials: new AWS.CognitoIdentityCredentials({
+                IdentityPoolId: 'ap-southeast-2_OyFyMeq2Y'  // Your Cognito Identity Pool ID
+            })
+        });
+
+        const s3 = new AWS.S3();
+        const transcribe = new AWS.TranscribeService();
+
+        // Initialize variables for audio recording
         let mediaRecorder;
         let audioChunks = [];
         const startRecordBtn = document.getElementById('startRecord');
         const stopRecordBtn = document.getElementById('stopRecord');
         const playRecordBtn = document.getElementById('playRecord');
         const audioPlayer = document.getElementById('audioPlayer');
+        const transcriptTextBox = document.getElementById('transcript');
 
         // Start Recording
         startRecordBtn.addEventListener('click', () => {
@@ -87,6 +101,7 @@
                         const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
                         const audioUrl = URL.createObjectURL(audioBlob);
                         audioPlayer.src = audioUrl;
+                        uploadAudioToS3(audioBlob); // Upload the recorded audio to S3
                     };
                     mediaRecorder.start();
                     startRecordBtn.disabled = true;
@@ -110,6 +125,81 @@
         playRecordBtn.addEventListener('click', () => {
             audioPlayer.play();
         });
+
+        // Upload Audio to S3
+        function uploadAudioToS3(audioBlob) {
+            const params = {
+                Bucket: 'pm-chatgpt-test', // Your S3 bucket name
+                Key: `audio/${Date.now()}.wav`, // Use timestamp as the file name
+                Body: audioBlob,
+                ContentType: 'audio/wav',
+                ACL: 'public-read' // Make the file publicly accessible
+            };
+
+            s3.upload(params, function(err, data) {
+                if (err) {
+                    console.log('Error uploading file:', err);
+                } else {
+                    console.log('File uploaded successfully:', data);
+                    const s3AudioUri = data.Location; // Get the URI of the uploaded file
+                    startTranscriptionJob(s3AudioUri); // Start Transcription job after upload
+                }
+            });
+        }
+
+        // Start a Transcription Job
+        function startTranscriptionJob(s3AudioUri) {
+            const params = {
+                TranscriptionJobName: `job-${Date.now()}`,
+                LanguageCode: 'en-US',
+                Media: {
+                    MediaFileUri: s3AudioUri // Audio URI from S3
+                },
+                OutputBucketName: 'pm-chatgpt-test' // Output bucket for transcription results
+            };
+
+            transcribe.startTranscriptionJob(params, function(err, data) {
+                if (err) {
+                    console.log('Error starting transcription job:', err);
+                } else {
+                    console.log('Transcription job started:', data);
+                    getTranscriptionResult(data.TranscriptionJobName); // Fetch transcription result
+                }
+            });
+        }
+
+        // Fetch Transcription Result and update the transcript text box
+        function getTranscriptionResult(jobName) {
+            const params = {
+                TranscriptionJobName: jobName
+            };
+
+            transcribe.getTranscriptionJob(params, function(err, data) {
+                if (err) {
+                    console.log('Error getting transcription result:', err);
+                } else {
+                    console.log('Transcription result:', data);
+                    if (data.TranscriptionJob.TranscriptionJobStatus === 'COMPLETED') {
+                        // Get the URL of the transcription result (JSON format)
+                        const transcriptUrl = data.TranscriptionJob.Transcript.TranscriptFileUri;
+                        fetchTranscriptAndDisplay(transcriptUrl);
+                    }
+                }
+            });
+        }
+
+        // Fetch the transcript and display it in the text box
+        function fetchTranscriptAndDisplay(url) {
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    const transcriptText = data.results.transcripts[0].transcript;
+                    transcriptTextBox.value = transcriptText; // Display the transcript in the textarea
+                })
+                .catch(error => {
+                    console.log('Error fetching transcript:', error);
+                });
+        }
     </script>
 </body>
 </html>
