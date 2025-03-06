@@ -124,24 +124,27 @@
         });
 
         // Upload the recorded audio to Amazon S3
-        function uploadAudioToS3(audioBlob) {
-            const params = {
-                Bucket: 'pm-chatgpt-test', // Your S3 bucket name
-                Key: `audio/${Date.now()}.wav`, // Use timestamp as the file name
-                Body: audioBlob,
-                ContentType: 'audio/wav',
-                ACL: 'public-read' // Make the file publicly accessible
-            };
+       function uploadAudioToS3(audioBlob) {
+        const params = {
+            Bucket: 'pm-chatgpt-test',  // Your S3 bucket name
+            Key: `audio/${Date.now()}.wav`, // Use timestamp as the file name
+            Body: audioBlob,
+            ContentType: 'audio/wav',
+            ACL: 'public-read' // Make the file publicly accessible
+        };
+    
+        console.log("Uploading to S3..."); // Add logging to track the upload process
+    
+        s3.upload(params, function(err, data) {
+            if (err) {
+                console.log('Error uploading file:', err);
+            } else {
+                console.log('File uploaded successfully:', data);
+                alert('Audio uploaded to S3 successfully!');
+            }
+        });
+    }
 
-            s3.upload(params, function(err, data) {
-                if (err) {
-                    console.log('Error uploading file:', err);
-                } else {
-                    console.log('File uploaded successfully:', data);
-                    alert('Audio uploaded to S3 successfully!');
-                }
-            });
-        }
     </script>
 </body>
 </html>
