@@ -58,6 +58,12 @@
             <br><br>
             <audio id="audioPlayer" controls></audio>
         </section>
+
+        <!-- Transcription Result Section -->
+        <section id="transcription">
+            <h2>Transcription Result</h2>
+            <textarea id="transcriptionResult" rows="10" cols="50" readonly></textarea>
+        </section>
     </main>
 
     <!-- Footer Section -->
@@ -77,10 +83,12 @@
         });
 
         const s3 = new AWS.S3();
+        const transcribe = new AWS.TranscribeService();
         const startRecordBtn = document.getElementById('startRecord');
         const stopRecordBtn = document.getElementById('stopRecord');
         const playRecordBtn = document.getElementById('playRecord');
         const audioPlayer = document.getElementById('audioPlayer');
+        const transcriptionResult = document.getElementById('transcriptionResult');
         let mediaRecorder;
         let audioChunks = [];
 
@@ -124,27 +132,88 @@
         });
 
         // Upload the recorded audio to Amazon S3
-       function uploadAudioToS3(audioBlob) {
-        const params = {
-            Bucket: 'pm-chatgpt-test',  // Your S3 bucket name
-            Key: `audio/${Date.now()}.wav`, // Use timestamp as the file name
-            Body: audioBlob,
-            ContentType: 'audio/wav',
-            
-        };
-    
-        console.log("Uploading to S3..."); // Add logging to track the upload process
-    
-        s3.upload(params, function(err, data) {
-            if (err) {
-                console.log('Error uploading file:', err);
-            } else {
-                console.log('File uploaded successfully:', data);
-                alert('Audio uploaded to S3 successfully!');
-            }
-        });
-    }
+        function uploadAudioToS3(audioBlob) {
+            const params = {
+                Bucket: 'pm-chatgpt-test',  // Your S3 bucket name
+                Key: `audio/${Date.now()}.wav`, // Use timestamp as the file name
+                Body: audioBlob,
+                ContentType: 'audio/wav',
+            };
 
+            console.log("Uploading to S3..."); // Add logging to track the upload process
+
+            s3.upload(params, function(err, data) {
+                if (err) {
+                    console.log('Error uploading file:', err);
+                } else {
+                    console.log('File uploaded successfully:', data);
+                    alert('Audio uploaded to S3 successfully!');
+
+                    // Start transcription after uploading
+                    startTranscriptionJob(data.Location);
+                }
+            });
+        }
+
+        // Start Transcription Job using Amazon Transcribe
+        function startTranscriptionJob(s3AudioUri) {
+            const jobName = `job-${Date.now()}`;
+            const params = {
+                TranscriptionJobName: jobName,
+                LanguageCode: 'en-US',
+                Media: {
+                    MediaFileUri: s3AudioUri
+                },
+                OutputBucketName: 'pm-chatgpt-test', // Your S3 bucket name where the transcription result will be saved
+            };
+
+            transcribe.startTranscriptionJob(params, function(err, data) {
+                if (err) {
+                    console.log('Error starting transcription job:', err);
+                } else {
+                    console.log('Transcription job started:', data);
+                    checkTranscriptionJobStatus(jobName);
+                }
+            });
+        }
+
+        // Poll the status of the transcription job
+        function checkTranscriptionJobStatus(jobName) {
+            const params = {
+                TranscriptionJobName: jobName
+            };
+
+            transcribe.getTranscriptionJob(params, function(err, data) {
+                if (err) {
+                    console.log('Error checking transcription job status:', err);
+                } else {
+                    const status = data.TranscriptionJob.TranscriptionJobStatus;
+                    if (status === 'COMPLETED') {
+                        // Transcription completed, get the result
+                        const transcriptUri = data.TranscriptionJob.Transcript.TranscriptFileUri;
+                        fetchTranscript(transcriptUri);
+                    } else if (status === 'FAILED') {
+                        console.log('Transcription job failed');
+                    } else {
+                        // If the transcription is still in progress, check again after 5 seconds
+                        setTimeout(() => checkTranscriptionJobStatus(jobName), 5000);
+                    }
+                }
+            });
+        }
+
+        // Fetch the transcription result
+        function fetchTranscript(transcriptUri) {
+            fetch(transcriptUri)
+                .then(response => response.json())
+                .then(data => {
+                    const transcript = data.results.transcripts[0].transcript;
+                    transcriptionResult.value = transcript;  // Display the transcript in the text area
+                })
+                .catch(error => {
+                    console.log('Error fetching transcript:', error);
+                });
+        }
     </script>
 </body>
 </html>
