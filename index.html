@@ -95,6 +95,9 @@
 
         // Start Recording
         startRecordBtn.addEventListener('click', () => {
+            // Clear previous recording chunks
+            audioChunks = [];
+            
             navigator.mediaDevices.getUserMedia({ audio: true })
                 .then(stream => {
                     mediaRecorder = new MediaRecorder(stream);
