@@ -58,6 +58,8 @@
             <br><br>
             <audio id="audioPlayer" controls></audio>
         </section>
+
+        <!-- Transcription Result Section -->
         <section id="transcription">
             <h2>Transcription Result</h2>
             <textarea id="transcriptionResult" rows="10" cols="50" readonly></textarea>
@@ -72,14 +74,14 @@
     <!-- AWS SDK & Voice Recording Script -->
     <script src="https://sdk.amazonaws.com/js/aws-sdk-2.947.0.min.js"></script>
     <script>
-             // AWS Configuration - Replace with your AWS settings
+        // AWS Configuration - Replace with your AWS settings
         AWS.config.update({
             region: 'ap-southeast-2', // Replace with your AWS region
             credentials: new AWS.CognitoIdentityCredentials({
                 IdentityPoolId: 'ap-southeast-2:e1961e14-083d-4200-bb2b-c869a5ffbc3d'  // Replace with your Cognito Identity Pool ID
             })
         });
-    
+
         const s3 = new AWS.S3();
         const transcribe = new AWS.TranscribeService(); // AWS Transcribe service
         const startRecordBtn = document.getElementById('startRecord');
@@ -89,7 +91,7 @@
         const transcriptionResult = document.getElementById('transcriptionResult');
         let mediaRecorder;
         let audioChunks = [];
-    
+
         // Start Recording
         startRecordBtn.addEventListener('click', () => {
             navigator.mediaDevices.getUserMedia({ audio: true })
@@ -102,7 +104,7 @@
                         const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
                         const audioUrl = URL.createObjectURL(audioBlob);
                         audioPlayer.src = audioUrl;
-    
+
                         // Upload to Amazon S3 after recording stops
                         uploadAudioToS3(audioBlob);
                     };
@@ -115,7 +117,7 @@
                     console.error('Error accessing the microphone:', error);
                 });
         });
-    
+
         // Stop Recording
         stopRecordBtn.addEventListener('click', () => {
             mediaRecorder.stop();
@@ -123,12 +125,12 @@
             stopRecordBtn.disabled = true;
             playRecordBtn.disabled = false;
         });
-    
+
         // Play the Recorded Audio
         playRecordBtn.addEventListener('click', () => {
             audioPlayer.play();
         });
-    
+
         // Upload the recorded audio to Amazon S3 with the same filename each time (overwrite previous file)
         function uploadAudioToS3(audioBlob) {
             const params = {
@@ -137,22 +139,22 @@
                 Body: audioBlob,
                 ContentType: 'audio/wav',
             };
-    
+
             console.log("Uploading to S3..."); // Add logging to track the upload process
-    
+
             s3.upload(params, function(err, data) {
                 if (err) {
                     console.log('Error uploading file:', err);
                 } else {
                     console.log('File uploaded successfully:', data);
                     alert('Audio uploaded to S3 successfully!');
-    
+
                     // Start transcription after uploading
                     startTranscriptionJob(data.Location);
                 }
             });
         }
-    
+
         // Start Transcription Job using Amazon Transcribe
         function startTranscriptionJob(s3AudioUri) {
             const jobName = `job-${Date.now()}`;
@@ -164,17 +166,16 @@
                 },
                 OutputBucketName: 'pm-chatgpt-test', // Your S3 bucket name where the transcription result will be saved
             };
-    
+
             transcribe.startTranscriptionJob(params, function(err, data) {
                 if (err) {
                     console.log('Error starting transcription job:', err);
                 } else {
                     console.log('Transcription job started:', data);
-                    // Here, we will poll for job status in the next step
+                    // Polling for job status will be added in the next step
                 }
             });
         }
-       
     </script>
 </body>
 </html>
