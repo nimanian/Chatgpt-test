@@ -83,9 +83,7 @@
         const startRecordBtn = document.getElementById('startRecord');
         const stopRecordBtn = document.getElementById('stopRecord');
         const playRecordBtn = document.getElementById('playRecord');
-        const transcriptBtn = document.getElementById('transcriptBtn');
         const audioPlayer = document.getElementById('audioPlayer');
-        const transcriptionResult = document.getElementById('transcriptionResult');
         let mediaRecorder;
         let audioChunks = [];
 
@@ -112,7 +110,7 @@
                     startRecordBtn.disabled = true;
                     stopRecordBtn.disabled = false;
                     playRecordBtn.disabled = true;
-                    transcriptBtn.disabled = true; // Disable Transcript Button during recording
+                   
                 })
                 .catch(error => {
                     console.error('Error accessing the microphone:', error);
@@ -120,12 +118,12 @@
         });
 
         // Stop Recording
-        stopRecordBtn.addEventListener('click', () => {
+            stopRecordBtn.addEventListener('click', () => {
             mediaRecorder.stop();
             startRecordBtn.disabled = false;
             stopRecordBtn.disabled = true;
             playRecordBtn.disabled = false;
-            transcriptBtn.disabled = false; // Enable Transcript Button after recording
+           
         });
 
         // Play the Recorded Audio
