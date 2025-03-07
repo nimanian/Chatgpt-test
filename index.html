@@ -106,7 +106,7 @@
                         const audioUrl = URL.createObjectURL(audioBlob);
                         audioPlayer.src = audioUrl;
 
-                        // Upload to Amazon S3 after recording stops
+                        // Upload to Amazon S3 after recording stops (this will overwrite the previous file)
                         uploadAudioToS3(audioBlob);
                     };
                     mediaRecorder.start();
