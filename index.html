@@ -55,8 +55,15 @@
             <button id="startRecord">Start Recording</button>
             <button id="stopRecord" disabled>Stop Recording</button>
             <button id="playRecord" disabled>Play Recording</button>
+            <button id="transcriptBtn" disabled>Transcript</button> <!-- New Transcript Button -->
             <br><br>
             <audio id="audioPlayer" controls></audio>
+        </section>
+
+        <!-- Transcription Section -->
+        <section id="transcription">
+            <h2>Transcription Result</h2>
+            <textarea id="transcriptionResult" rows="10" cols="50" readonly></textarea> <!-- Textbox for Transcription -->
         </section>
     </main>
 
@@ -80,7 +87,9 @@
         const startRecordBtn = document.getElementById('startRecord');
         const stopRecordBtn = document.getElementById('stopRecord');
         const playRecordBtn = document.getElementById('playRecord');
+        const transcriptBtn = document.getElementById('transcriptBtn');
         const audioPlayer = document.getElementById('audioPlayer');
+        const transcriptionResult = document.getElementById('transcriptionResult');
         let mediaRecorder;
         let audioChunks = [];
 
@@ -104,6 +113,7 @@
                     startRecordBtn.disabled = true;
                     stopRecordBtn.disabled = false;
                     playRecordBtn.disabled = true;
+                    transcriptBtn.disabled = true; // Disable Transcript Button during recording
                 })
                 .catch(error => {
                     console.error('Error accessing the microphone:', error);
@@ -116,6 +126,7 @@
             startRecordBtn.disabled = false;
             stopRecordBtn.disabled = true;
             playRecordBtn.disabled = false;
+            transcriptBtn.disabled = false; // Enable Transcript Button after recording
         });
 
         // Play the Recorded Audio
@@ -123,28 +134,26 @@
             audioPlayer.play();
         });
 
-        // Upload the recorded audio to Amazon S3
-       function uploadAudioToS3(audioBlob) {
-        const params = {
-            Bucket: 'pm-chatgpt-test',  // Your S3 bucket name
-            Key: `audio/${Date.now()}.wav`, // Use timestamp as the file name
-            Body: audioBlob,
-            ContentType: 'audio/wav',
-            
-        };
-    
-        console.log("Uploading to S3..."); // Add logging to track the upload process
-    
-        s3.upload(params, function(err, data) {
-            if (err) {
-                console.log('Error uploading file:', err);
-            } else {
-                console.log('File uploaded successfully:', data);
-                alert('Audio uploaded to S3 successfully!');
-            }
-        });
-    }
+        // Upload the recorded audio to Amazon S3 with the same filename each time (overwrite previous file)
+        function uploadAudioToS3(audioBlob) {
+            const params = {
+                Bucket: 'pm-chatgpt-test',  // Your S3 bucket name
+                Key: 'audio/latest-recording.wav', // Fixed file name to replace the previous recording
+                Body: audioBlob,
+                ContentType: 'audio/wav',
+            };
 
+            console.log("Uploading to S3..."); // Add logging to track the upload process
+
+            s3.upload(params, function(err, data) {
+                if (err) {
+                    console.log('Error uploading file:', err);
+                } else {
+                    console.log('File uploaded successfully:', data);
+                    alert('Audio uploaded to S3 successfully!');
+                }
+            });
+        }
     </script>
 </body>
 </html>
