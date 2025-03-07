@@ -171,7 +171,7 @@
             s3.headObject(params, (err, data) => {
                 if (err) {
                     console.log('Error retrieving file from S3:', err);
-                    alert('File not found in S3. Please try again after recording.');
+                    alert(err);
                 } else {
                     console.log('File found in S3:', data);
                     alert('File found in S3. Proceeding with transcription.');
