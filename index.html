@@ -55,8 +55,15 @@
             <button id="startRecord">Start Recording</button>
             <button id="stopRecord" disabled>Stop Recording</button>
             <button id="playRecord" disabled>Play Recording</button>
+            <button id="transcriptBtn" disabled>Transcript</button> <!-- New Transcript Button -->
             <br><br>
             <audio id="audioPlayer" controls></audio>
+        </section>
+
+        <!-- Transcription Section -->
+        <section id="transcription">
+            <h2>Transcription Result</h2>
+            <textarea id="transcriptionResult" rows="10" cols="50" readonly></textarea> <!-- Textbox for Transcription -->
         </section>
     </main>
 
@@ -80,7 +87,9 @@
         const startRecordBtn = document.getElementById('startRecord');
         const stopRecordBtn = document.getElementById('stopRecord');
         const playRecordBtn = document.getElementById('playRecord');
+        const transcriptBtn = document.getElementById('transcriptBtn');
         const audioPlayer = document.getElementById('audioPlayer');
+        const transcriptionResult = document.getElementById('transcriptionResult');
         let mediaRecorder;
         let audioChunks = [];
 
@@ -107,6 +116,7 @@
                     startRecordBtn.disabled = true;
                     stopRecordBtn.disabled = false;
                     playRecordBtn.disabled = true;
+                    transcriptBtn.disabled = true; // Disable Transcript Button during recording
                 })
                 .catch(error => {
                     console.error('Error accessing the microphone:', error);
@@ -119,6 +129,7 @@
             startRecordBtn.disabled = false;
             stopRecordBtn.disabled = true;
             playRecordBtn.disabled = false;
+            transcriptBtn.disabled = false; // Enable Transcript Button after recording
         });
 
         // Play the Recorded Audio
