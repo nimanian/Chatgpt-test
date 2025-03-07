@@ -55,15 +55,8 @@
             <button id="startRecord">Start Recording</button>
             <button id="stopRecord" disabled>Stop Recording</button>
             <button id="playRecord" disabled>Play Recording</button>
-            <button id="transcriptBtn" disabled>Transcript</button> <!-- New Transcript Button -->
             <br><br>
             <audio id="audioPlayer" controls></audio>
-        </section>
-
-        <!-- Transcription Section -->
-        <section id="transcription">
-            <h2>Transcription Result</h2>
-            <textarea id="transcriptionResult" rows="10" cols="50" readonly></textarea> <!-- Textbox for Transcription -->
         </section>
     </main>
 
@@ -87,9 +80,7 @@
         const startRecordBtn = document.getElementById('startRecord');
         const stopRecordBtn = document.getElementById('stopRecord');
         const playRecordBtn = document.getElementById('playRecord');
-        const transcriptBtn = document.getElementById('transcriptBtn');
         const audioPlayer = document.getElementById('audioPlayer');
-        const transcriptionResult = document.getElementById('transcriptionResult');
         let mediaRecorder;
         let audioChunks = [];
 
@@ -116,7 +107,6 @@
                     startRecordBtn.disabled = true;
                     stopRecordBtn.disabled = false;
                     playRecordBtn.disabled = true;
-                    transcriptBtn.disabled = true; // Disable Transcript Button during recording
                 })
                 .catch(error => {
                     console.error('Error accessing the microphone:', error);
@@ -129,7 +119,6 @@
             startRecordBtn.disabled = false;
             stopRecordBtn.disabled = true;
             playRecordBtn.disabled = false;
-            transcriptBtn.disabled = false; // Enable Transcript Button after recording
         });
 
         // Play the Recorded Audio
@@ -157,28 +146,6 @@
                 }
             });
         }
-
-        // Check S3 File Existence when Clicking on Transcript
-            transcriptBtn.addEventListener('click', () => {
-            console.log("Checking file existence in S3...");
-            
-            // Check if the file exists in S3
-            const params = {
-                Bucket: 'pm-chatgpt-test',  // Your S3 bucket name
-                Key: 'audio/latest-recording.wav'  // The file name to check
-            };
-        
-            s3.headObject(params, (err, data) => {
-                if (err) {
-                    console.log('Error retrieving file from S3:', err);
-                    alert(err);
-                } else {
-                    console.log('File found in S3:', data);
-                    alert('File found in S3. Proceeding with transcription.');
-                }
-            });
-        });
-
     </script>
 </body>
 </html>
