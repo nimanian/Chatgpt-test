@@ -58,12 +58,6 @@
             <br><br>
             <audio id="audioPlayer" controls></audio>
         </section>
-
-        <!-- Transcription Result Section -->
-        <section id="transcription">
-            <h2>Transcription Result</h2>
-            <textarea id="transcriptionResult" rows="10" cols="50" readonly></textarea>
-        </section>
     </main>
 
     <!-- Footer Section -->
@@ -83,12 +77,10 @@
         });
 
         const s3 = new AWS.S3();
-        const transcribe = new AWS.TranscribeService(); // AWS Transcribe service
         const startRecordBtn = document.getElementById('startRecord');
         const stopRecordBtn = document.getElementById('stopRecord');
         const playRecordBtn = document.getElementById('playRecord');
         const audioPlayer = document.getElementById('audioPlayer');
-        const transcriptionResult = document.getElementById('transcriptionResult');
         let mediaRecorder;
         let audioChunks = [];
 
@@ -131,51 +123,28 @@
             audioPlayer.play();
         });
 
-        // Upload the recorded audio to Amazon S3 with the same filename each time (overwrite previous file)
-        function uploadAudioToS3(audioBlob) {
-            const params = {
-                Bucket: 'pm-chatgpt-test',  // Your S3 bucket name
-                Key: 'audio/latest-recording.wav', // Fixed file name to replace the previous recording
-                Body: audioBlob,
-                ContentType: 'audio/wav',
-            };
+        // Upload the recorded audio to Amazon S3
+       function uploadAudioToS3(audioBlob) {
+        const params = {
+            Bucket: 'pm-chatgpt-test',  // Your S3 bucket name
+            Key: `audio/${Date.now()}.wav`, // Use timestamp as the file name
+            Body: audioBlob,
+            ContentType: 'audio/wav',
+            
+        };
+    
+        console.log("Uploading to S3..."); // Add logging to track the upload process
+    
+        s3.upload(params, function(err, data) {
+            if (err) {
+                console.log('Error uploading file:', err);
+            } else {
+                console.log('File uploaded successfully:', data);
+                alert('Audio uploaded to S3 successfully!');
+            }
+        });
+    }
 
-            console.log("Uploading to S3..."); // Add logging to track the upload process
-
-            s3.upload(params, function(err, data) {
-                if (err) {
-                    console.log('Error uploading file:', err);
-                } else {
-                    console.log('File uploaded successfully:', data);
-                    alert('Audio uploaded to S3 successfully!');
-
-                    // Start transcription after uploading
-                    startTranscriptionJob(data.Location);
-                }
-            });
-        }
-
-        // Start Transcription Job using Amazon Transcribe
-        function startTranscriptionJob(s3AudioUri) {
-            const jobName = `job-${Date.now()}`;
-            const params = {
-                TranscriptionJobName: jobName,
-                LanguageCode: 'en-US',
-                Media: {
-                    MediaFileUri: s3AudioUri
-                },
-                OutputBucketName: 'pm-chatgpt-test', // Your S3 bucket name where the transcription result will be saved
-            };
-
-            transcribe.startTranscriptionJob(params, function(err, data) {
-                if (err) {
-                    console.log('Error starting transcription job:', err);
-                } else {
-                    console.log('Transcription job started:', data);
-                    // Polling for job status will be added in the next step
-                }
-            });
-        }
     </script>
 </body>
 </html>
