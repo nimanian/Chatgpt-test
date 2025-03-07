@@ -157,6 +157,29 @@
                 }
             });
         }
+
+        // Check S3 File Existence when Clicking on Transcript
+        transcriptBtn.addEventListener('click', () => {
+            // Check if the file exists in S3
+            const params = {
+                Bucket: 'pm-chatgpt-test',  // Your S3 bucket name
+                Key: 'audio/latest-recording.wav'  // The file name to check
+            };
+
+            s3.headObject(params, (err, data) => {
+                if (err) {
+                    // Handle the error
+                    console.log('Error retrieving file from S3:', err);
+                    alert('File not found in S3. Please try again after recording.');
+                } else {
+                    // If the file exists, show a confirmation message
+                    console.log('File found in S3:', data);
+                    alert('File found in S3. Proceeding with transcription.');
+                    // Proceed to transcription logic here (next step)
+                }
+            });
+        });
+
     </script>
 </body>
 </html>
