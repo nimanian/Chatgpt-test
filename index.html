@@ -58,6 +58,13 @@
             <br><br>
             <audio id="audioPlayer" controls></audio>
         </section>
+
+        <!-- Transcription Section -->
+        <section id="transcription">
+            <h2>Transcription Result</h2>
+            <textarea id="transcriptionResult" rows="10" cols="50" readonly></textarea>
+            <button id="transcriptBtn">Transcript</button> <!-- Button to fetch transcript -->
+        </section>
     </main>
 
     <!-- Footer Section -->
@@ -77,10 +84,13 @@
         });
 
         const s3 = new AWS.S3();
+        const transcribe = new AWS.TranscribeService(); // AWS Transcribe service
         const startRecordBtn = document.getElementById('startRecord');
         const stopRecordBtn = document.getElementById('stopRecord');
         const playRecordBtn = document.getElementById('playRecord');
         const audioPlayer = document.getElementById('audioPlayer');
+        const transcriptionResult = document.getElementById('transcriptionResult');
+        const transcriptBtn = document.getElementById('transcriptBtn');
         let mediaRecorder;
         let audioChunks = [];
 
@@ -140,9 +150,60 @@
                 } else {
                     console.log('File uploaded successfully:', data);
                     alert('Audio uploaded to S3 successfully!');
+                    
+                    // Start transcription after uploading
+                    startTranscriptionJob(data.Location);
                 }
             });
         }
+
+        // Start Transcription Job using Amazon Transcribe
+        function startTranscriptionJob(s3AudioUri) {
+            const jobName = `job-${Date.now()}`;
+            const params = {
+                TranscriptionJobName: jobName,
+                LanguageCode: 'en-US',
+                Media: {
+                    MediaFileUri: s3AudioUri
+                },
+                OutputBucketName: 'pm-chatgpt-test', // Your S3 bucket name where the transcription result will be saved
+            };
+
+            transcribe.startTranscriptionJob(params, function(err, data) {
+                if (err) {
+                    console.log('Error starting transcription job:', err);
+                } else {
+                    console.log('Transcription job started:', data);
+                    // Polling for job status will be added in the next step
+                }
+            });
+        }
+
+        // Fetch and display the transcription result in the text box when the button is clicked
+        transcriptBtn.addEventListener('click', () => {
+            const transcriptionJobName = `job-${Date.now()}`;  // Use the transcription job name you created earlier
+
+            const params = {
+                TranscriptionJobName: transcriptionJobName
+            };
+
+            transcribe.getTranscriptionJob(params, (err, data) => {
+                if (err) {
+                    console.error('Error fetching transcription job:', err);
+                } else {
+                    const transcriptionResultUri = data.TranscriptionJob.Transcript.TranscriptFileUri;
+                    fetch(transcriptionResultUri)
+                        .then(response => response.json())
+                        .then(data => {
+                            transcriptionResult.value = data.results.transcripts[0].transcript;
+                        })
+                        .catch(error => {
+                            console.error('Error fetching transcription result:', error);
+                        });
+                }
+            });
+        });
+
     </script>
 </body>
 </html>
