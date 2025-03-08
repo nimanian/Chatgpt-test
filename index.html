@@ -55,11 +55,16 @@
             <button id="startRecord">Start Recording</button>
             <button id="stopRecord" disabled>Stop Recording</button>
             <button id="playRecord" disabled>Play Recording</button>
-            <button id="transcriptBtn" disabled>Get Transcription</button> <!-- New Get Transcription Button -->
+            <button id="transcriptBtn" disabled>Get Transcript</button> <!-- New Transcript Button -->
             <br><br>
             <audio id="audioPlayer" controls></audio>
         </section>
 
+        <!-- Transcription Section -->
+        <section id="transcription">
+            <h2>Transcription Result</h2>
+            <textarea id="transcriptionResult" rows="10" cols="50" readonly></textarea> <!-- Textbox for Transcription -->
+        </section>
     </main>
 
     <!-- Footer Section -->
@@ -79,7 +84,7 @@
         });
 
         const s3 = new AWS.S3();
-        const transcribe = new AWS.TranscribeService(); // Add AWS Transcribe service
+        const transcribe = new AWS.TranscribeService(); // AWS Transcribe service
         const startRecordBtn = document.getElementById('startRecord');
         const stopRecordBtn = document.getElementById('stopRecord');
         const playRecordBtn = document.getElementById('playRecord');
@@ -150,77 +155,35 @@
                 } else {
                     console.log('File uploaded successfully:', data);
                     alert('Audio uploaded to S3 successfully!');
+                    transcriptBtn.disabled = false; // Enable the Transcript button after upload
                 }
             });
         }
 
-        // Get Transcription when Clicking on Transcript Button
+        // Start Transcription Job using Amazon Transcribe
         transcriptBtn.addEventListener('click', () => {
-            console.log("Starting Transcription...");
-
-            // Step 1: Start Transcription Job using AWS Transcribe
-            const jobName = `transcription-${Date.now()}`;
+            const jobName = `job-${Date.now()}`;
             const params = {
                 TranscriptionJobName: jobName,
                 LanguageCode: 'en-US',
                 Media: {
-                    MediaFileUri: 'https://pm-chatgpt-test.s3.amazonaws.com/audio/latest-recording.wav' // URL of the file in S3
+                    MediaFileUri: 'https://pm-chatgpt-test.s3.amazonaws.com/audio/latest-recording.wav'  // The S3 URI of the recorded audio
                 },
-                OutputBucketName: 'pm-chatgpt-test', // Bucket where the result will be saved
+                OutputBucketName: 'pm-chatgpt-test', // The S3 bucket where the transcription result will be stored
             };
 
+            console.log("Starting Transcription job...");
+            
+            // Start transcription
             transcribe.startTranscriptionJob(params, function(err, data) {
                 if (err) {
                     console.log('Error starting transcription job:', err);
-                    alert('Error starting transcription job.');
                 } else {
                     console.log('Transcription job started:', data);
-                    alert('Transcription job started! Checking the status...');
-                    pollTranscriptionJobStatus(jobName); // Call function to poll for job completion
+                    // Polling for the transcription result will be added next
                 }
             });
         });
-
-        // Function to Poll Transcription Job Status
-        function pollTranscriptionJobStatus(jobName) {
-            const params = {
-                TranscriptionJobName: jobName
-            };
-
-            transcribe.getTranscriptionJob(params, function(err, data) {
-                if (err) {
-                    console.log('Error getting transcription job status:', err);
-                } else {
-                    if (data.TranscriptionJob.TranscriptionJobStatus === 'COMPLETED') {
-                        console.log('Transcription job completed!');
-                        const transcriptUrl = data.TranscriptionJob.Transcript.TranscriptFileUri;
-                        fetchTranscript(transcriptUrl);
-                    } else if (data.TranscriptionJob.TranscriptionJobStatus === 'FAILED') {
-                        console.log('Transcription job failed.');
-                        alert('Transcription failed.');
-                    } else {
-                        console.log('Transcription job still in progress...');
-                        setTimeout(() => {
-                            pollTranscriptionJobStatus(jobName); // Poll again after a short delay
-                        }, 5000); // Poll every 5 seconds
-                    }
-                }
-            });
-        }
-
-        // Fetch Transcription Results from S3
-        function fetchTranscript(transcriptUrl) {
-            fetch(transcriptUrl)
-                .then(response => response.json())
-                .then(data => {
-                    transcriptionResult.value = data.results.transcripts[0].transcript; // Display transcription result in the textbox
-                    console.log('Transcription:', data.results.transcripts[0].transcript);
-                })
-                .catch(error => {
-                    console.error('Error fetching transcript:', error);
-                    alert('Failed to fetch transcript.');
-                });
-        }
     </script>
 </body>
 </html>
