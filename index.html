@@ -79,11 +79,13 @@
         });
 
         const s3 = new AWS.S3();
+        const transcribe = new AWS.TranscribeService(); // Add AWS Transcribe service
         const startRecordBtn = document.getElementById('startRecord');
         const stopRecordBtn = document.getElementById('stopRecord');
         const playRecordBtn = document.getElementById('playRecord');
         const transcriptBtn = document.getElementById('transcriptBtn');
         const audioPlayer = document.getElementById('audioPlayer');
+        const transcriptionResult = document.getElementById('transcriptionResult');
         let mediaRecorder;
         let audioChunks = [];
 
@@ -152,13 +154,73 @@
             });
         }
 
-        // Fetch Transcription - This is the placeholder for the transcription button action
+        // Get Transcription when Clicking on Transcript Button
         transcriptBtn.addEventListener('click', () => {
-            console.log("Fetching transcription...");
-            // Placeholder for calling Amazon Transcribe API and fetching transcription
-            // Call Amazon Transcribe API to start the transcription process.
-            alert("Transcription feature coming soon!");
+            console.log("Starting Transcription...");
+
+            // Step 1: Start Transcription Job using AWS Transcribe
+            const jobName = `transcription-${Date.now()}`;
+            const params = {
+                TranscriptionJobName: jobName,
+                LanguageCode: 'en-US',
+                Media: {
+                    MediaFileUri: 'https://pm-chatgpt-test.s3.amazonaws.com/audio/latest-recording.wav' // URL of the file in S3
+                },
+                OutputBucketName: 'pm-chatgpt-test', // Bucket where the result will be saved
+            };
+
+            transcribe.startTranscriptionJob(params, function(err, data) {
+                if (err) {
+                    console.log('Error starting transcription job:', err);
+                    alert('Error starting transcription job.');
+                } else {
+                    console.log('Transcription job started:', data);
+                    alert('Transcription job started! Checking the status...');
+                    pollTranscriptionJobStatus(jobName); // Call function to poll for job completion
+                }
+            });
         });
+
+        // Function to Poll Transcription Job Status
+        function pollTranscriptionJobStatus(jobName) {
+            const params = {
+                TranscriptionJobName: jobName
+            };
+
+            transcribe.getTranscriptionJob(params, function(err, data) {
+                if (err) {
+                    console.log('Error getting transcription job status:', err);
+                } else {
+                    if (data.TranscriptionJob.TranscriptionJobStatus === 'COMPLETED') {
+                        console.log('Transcription job completed!');
+                        const transcriptUrl = data.TranscriptionJob.Transcript.TranscriptFileUri;
+                        fetchTranscript(transcriptUrl);
+                    } else if (data.TranscriptionJob.TranscriptionJobStatus === 'FAILED') {
+                        console.log('Transcription job failed.');
+                        alert('Transcription failed.');
+                    } else {
+                        console.log('Transcription job still in progress...');
+                        setTimeout(() => {
+                            pollTranscriptionJobStatus(jobName); // Poll again after a short delay
+                        }, 5000); // Poll every 5 seconds
+                    }
+                }
+            });
+        }
+
+        // Fetch Transcription Results from S3
+        function fetchTranscript(transcriptUrl) {
+            fetch(transcriptUrl)
+                .then(response => response.json())
+                .then(data => {
+                    transcriptionResult.value = data.results.transcripts[0].transcript; // Display transcription result in the textbox
+                    console.log('Transcription:', data.results.transcripts[0].transcript);
+                })
+                .catch(error => {
+                    console.error('Error fetching transcript:', error);
+                    alert('Failed to fetch transcript.');
+                });
+        }
     </script>
 </body>
 </html>
