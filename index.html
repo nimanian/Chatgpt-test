@@ -60,11 +60,6 @@
             <audio id="audioPlayer" controls></audio>
         </section>
 
-        <!-- Transcription Section -->
-        <section id="transcription">
-            <h2>Transcription Result</h2>
-            <textarea id="transcriptionResult" rows="10" cols="50" readonly></textarea> <!-- Textbox for Transcription -->
-        </section>
     </main>
 
     <!-- Footer Section -->
@@ -84,13 +79,12 @@
         });
 
         const s3 = new AWS.S3();
-        const transcribe = new AWS.TranscribeService(); // AWS Transcribe service
+        const transcribe = new AWS.TranscribeService(); // Correct way to instantiate TranscribeService
         const startRecordBtn = document.getElementById('startRecord');
         const stopRecordBtn = document.getElementById('stopRecord');
         const playRecordBtn = document.getElementById('playRecord');
         const transcriptBtn = document.getElementById('transcriptBtn');
         const audioPlayer = document.getElementById('audioPlayer');
-        const transcriptionResult = document.getElementById('transcriptionResult');
         let mediaRecorder;
         let audioChunks = [];
 
@@ -180,6 +174,7 @@
                     console.log('Error starting transcription job:', err);
                 } else {
                     console.log('Transcription job started:', data);
+                    alert('Transcription job started! Please wait a moment.');
                     // Polling for the transcription result will be added next
                 }
             });
