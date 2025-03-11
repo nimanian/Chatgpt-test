@@ -49,17 +49,26 @@
             </form>
         </section>
 
+        <!-- ChatGPT Section -->
+        <section id="chatgpt">
+            <h2>Chat with Dr-Inovates</h2>
+            <div id="chatBox">
+                <!-- Chat messages will appear here -->
+            </div>
+            <textarea id="userInput" rows="4" cols="50" placeholder="Type your message..."></textarea>
+            <br>
+            <button id="sendMessageBtn">Send Message</button>
+        </section>
+
         <!-- Voice Recording Section -->
         <section id="voice-recording">
             <h2>Voice Recording</h2>
             <button id="startRecord">Start Recording</button>
             <button id="stopRecord" disabled>Stop Recording</button>
             <button id="playRecord" disabled>Play Recording</button>
-           
             <br><br>
             <audio id="audioPlayer" controls></audio>
         </section>
-
        
     </main>
 
@@ -71,6 +80,9 @@
     <!-- AWS SDK & Voice Recording Script -->
     <script src="https://sdk.amazonaws.com/js/aws-sdk-2.947.0.min.js"></script>
     <script>
+        // Your OpenAI API Key
+        const apiKey = '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'; // Replace with your actual API key from OpenAI
+
         // AWS Configuration - Replace with your AWS settings
         AWS.config.update({
             region: 'ap-southeast-2', // Replace with your AWS region
@@ -79,7 +91,51 @@
             })
         });
 
-        const s3 = new AWS.S3();
+        // ChatGPT functionality
+        const sendMessageBtn = document.getElementById('sendMessageBtn');
+        const userInput = document.getElementById('userInput');
+        const chatBox = document.getElementById('chatBox');
+
+        sendMessageBtn.addEventListener('click', () => {
+            const userMessage = userInput.value.trim();
+            if (userMessage) {
+                // Display user message in chatbox
+                chatBox.innerHTML += `<p><strong>You:</strong> ${userMessage}</p>`;
+
+                // Clear input box
+                userInput.value = '';
+
+                // Call OpenAI API
+                getChatGPTResponse(userMessage);
+            }
+        });
+
+        // Function to get response from ChatGPT API
+        function getChatGPTResponse(message) {
+            fetch('https://api.openai.com/v1/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`,
+                },
+                body: JSON.stringify({
+                    model: 'text-davinci-003',  // Use the model of your choice
+                    prompt: message,
+                    max_tokens: 150,
+                    temperature: 0.7,
+                }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                const gptMessage = data.choices[0].text.trim();
+                chatBox.innerHTML += `<p><strong>Dr-Inovates:</strong> ${gptMessage}</p>`;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }
+
+        // Voice Recording Section
         const startRecordBtn = document.getElementById('startRecord');
         const stopRecordBtn = document.getElementById('stopRecord');
         const playRecordBtn = document.getElementById('playRecord');
@@ -87,11 +143,8 @@
         let mediaRecorder;
         let audioChunks = [];
 
-        // Start Recording
         startRecordBtn.addEventListener('click', () => {
-            // Clear previous recording chunks
             audioChunks = [];
-            
             navigator.mediaDevices.getUserMedia({ audio: true })
                 .then(stream => {
                     mediaRecorder = new MediaRecorder(stream);
@@ -102,45 +155,38 @@
                         const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
                         const audioUrl = URL.createObjectURL(audioBlob);
                         audioPlayer.src = audioUrl;
-
-                        // Upload to Amazon S3 after recording stops (this will overwrite the previous file)
                         uploadAudioToS3(audioBlob);
                     };
                     mediaRecorder.start();
                     startRecordBtn.disabled = true;
                     stopRecordBtn.disabled = false;
                     playRecordBtn.disabled = true;
-                   
                 })
                 .catch(error => {
                     console.error('Error accessing the microphone:', error);
                 });
         });
 
-        // Stop Recording
-            stopRecordBtn.addEventListener('click', () => {
+        stopRecordBtn.addEventListener('click', () => {
             mediaRecorder.stop();
             startRecordBtn.disabled = false;
             stopRecordBtn.disabled = true;
             playRecordBtn.disabled = false;
-           
         });
 
-        // Play the Recorded Audio
         playRecordBtn.addEventListener('click', () => {
             audioPlayer.play();
         });
 
-        // Upload the recorded audio to Amazon S3 with the same filename each time (overwrite previous file)
         function uploadAudioToS3(audioBlob) {
             const params = {
-                Bucket: 'pm-chatgpt-test',  // Your S3 bucket name
-                Key: 'audio/latest-recording.wav', // Fixed file name to replace the previous recording
+                Bucket: 'pm-chatgpt-test',
+                Key: 'audio/latest-recording.wav',
                 Body: audioBlob,
                 ContentType: 'audio/wav',
             };
 
-            console.log("Uploading to S3..."); // Add logging to track the upload process
+            console.log("Uploading to S3...");
 
             s3.upload(params, function(err, data) {
                 if (err) {
