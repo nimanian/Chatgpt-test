@@ -55,20 +55,18 @@
             <button id="startRecord">Start Recording</button>
             <button id="stopRecord" disabled>Stop Recording</button>
             <button id="playRecord" disabled>Play Recording</button>
-           
             <br><br>
             <audio id="audioPlayer" controls></audio>
         </section>
 
+        <!-- Chat Section -->
         <section id="chat">
             <h2>Chat with ChatGPT</h2>
             <textarea id="chatInput" placeholder="Ask something..." rows="4"></textarea><br>
             <button id="sendMessage">Send</button>
             <div id="chatOutput"></div>
-            </section>
+        </section>
 
-
-       
     </main>
 
     <!-- Footer Section -->
@@ -77,115 +75,23 @@
     </footer>
 
     <!-- AWS SDK & Voice Recording Script -->
-<script src="https://sdk.amazonaws.com/js/aws-sdk-2.947.0.min.js"></script>
-<script>
-    // AWS Configuration - Replace with your AWS settings
-    AWS.config.update({
-        region: 'ap-southeast-2', // Replace with your AWS region
-        credentials: new AWS.CognitoIdentityCredentials({
-            IdentityPoolId: 'ap-southeast-2:e1961e14-083d-4200-bb2b-c869a5ffbc3d'  // Replace with your Cognito Identity Pool ID
-        })
-    });
-
-    const s3 = new AWS.S3();
-    const startRecordBtn = document.getElementById('startRecord');
-    const stopRecordBtn = document.getElementById('stopRecord');
-    const playRecordBtn = document.getElementById('playRecord');
-    const audioPlayer = document.getElementById('audioPlayer');
-    const sendMessageBtn = document.getElementById('sendMessage');
-    const chatInput = document.getElementById('chatInput');
-    const chatOutput = document.getElementById('chatOutput');
-    let mediaRecorder;
-    let audioChunks = [];
-
-    // Start Recording
-    startRecordBtn.addEventListener('click', () => {
-        // Clear previous recording chunks
-        audioChunks = [];
-        
-        navigator.mediaDevices.getUserMedia({ audio: true })
-            .then(stream => {
-                mediaRecorder = new MediaRecorder(stream);
-                mediaRecorder.ondataavailable = event => {
-                    audioChunks.push(event.data);
-                };
-                mediaRecorder.onstop = () => {
-                    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-                    const audioUrl = URL.createObjectURL(audioBlob);
-                    audioPlayer.src = audioUrl;
-
-                    // Upload to Amazon S3 after recording stops (this will overwrite the previous file)
-                    uploadAudioToS3(audioBlob);
-                };
-                mediaRecorder.start();
-                startRecordBtn.disabled = true;
-                stopRecordBtn.disabled = false;
-                playRecordBtn.disabled = true;
+    <script src="https://sdk.amazonaws.com/js/aws-sdk-2.947.0.min.js"></script>
+    <script>
+        // AWS Configuration - Replace with your AWS settings
+        AWS.config.update({
+            region: 'ap-southeast-2', // Replace with your AWS region
+            credentials: new AWS.CognitoIdentityCredentials({
+                IdentityPoolId: 'ap-southeast-2:e1961e14-083d-4200-bb2b-c869a5ffbc3d'  // Replace with your Cognito Identity Pool ID
             })
-            .catch(error => {
-                console.error('Error accessing the microphone:', error);
-            });
-    });
-
-    // Stop Recording
-    stopRecordBtn.addEventListener('click', () => {
-        mediaRecorder.stop();
-        startRecordBtn.disabled = false;
-        stopRecordBtn.disabled = true;
-        playRecordBtn.disabled = false;
-    });
-
-    // Play the Recorded Audio
-    playRecordBtn.addEventListener('click', () => {
-        audioPlayer.play();
-    });
-
-    // Upload the recorded audio to Amazon S3 with the same filename each time (overwrite previous file)
-    function uploadAudioToS3(audioBlob) {
-        const params = {
-            Bucket: 'pm-chatgpt-test',  // Your S3 bucket name
-            Key: 'audio/latest-recording.wav', // Fixed file name to replace the previous recording
-            Body: audioBlob,
-            ContentType: 'audio/wav',
-        };
-
-        console.log("Uploading to S3..."); // Add logging to track the upload process
-
-        s3.upload(params, function(err, data) {
-            if (err) {
-                console.log('Error uploading file:', err);
-            } else {
-                console.log('File uploaded successfully:', data);
-                alert('Audio uploaded to S3 successfully!');
-            }
         });
-    }
 
-    // ChatGPT functionality: Send query to API Gateway and display the response
-    sendMessageBtn.addEventListener('click', async () => {
-        const userQuery = chatInput.value;
-
-        if (userQuery.trim()) {
-            // Display the user's query
-            chatOutput.innerHTML += `<p><strong>You:</strong> ${userQuery}</p>`;
-            chatInput.value = '';
-
-            // Call the Lambda function through API Gateway
-            try {
-                const response = await fetch('https://pe3dwckqgb.execute-api.ap-southeast-2.amazonaws.com/pmprod/chat?query=' + encodeURIComponent(userQuery), {
-                    method: 'POST',
-                });
-                const data = await response.json();
-                const botReply = data.message;
-                
-                // Display the response from ChatGPT
-                chatOutput.innerHTML += `<p><strong>ChatGPT:</strong> ${botReply}</p>`;
-            } catch (error) {
-                chatOutput.innerHTML += `<p><strong>Error:</strong> Failed to get response from ChatGPT.</p>`;
-            }
-        }
-    });
-</script>
-
-</body>
-</html>
+        const s3 = new AWS.S3();
+        const startRecordBtn = document.getElementById('startRecord');
+        const stopRecordBtn = document.getElementById('stopRecord');
+        const playRecordBtn = document.getElementById('playRecord');
+        const audioPlayer = document.getElementById('audioPlayer');
+        const sendMessageBtn = document.getElementById('sendMessage');
+        const chatInput = document.getElementById('chatInput');
+        const chatOutput = document.getElementById('chatOutput');
+        let mediaRecorder;
+        let audioChunks
