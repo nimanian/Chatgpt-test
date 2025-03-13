@@ -20,51 +20,7 @@
     </header>
 
     <main>
-        <section id="home">
-            <h1>Welcome to Dr-Inovates</h1>
-            <p>Your trusted partner in innovative medical solutions.</p>
-        </section>
-
-        <section id="about">
-            <h2>About Dr-Inovates</h2>
-            <p>Learn more about the doctor and the mission of Dr-Inovates.</p>
-        </section>
-
-        <section id="services">
-            <h2>Our Services</h2>
-            <p>Discover the services we offer to enhance your medical experience.</p>
-        </section>
-
-        <section id="contact">
-            <h2>Contact Us</h2>
-            <form>
-                <label for="name">Name:</label>
-                <input type="text" id="name" name="name">
-                <label for="email">Email:</label>
-                <input type="email" id="email" name="email">
-                <textarea name="message" id="message" rows="4" placeholder="Your message"></textarea>
-                <button type="submit">Send Message</button>
-            </form>
-        </section>
-
-        <section id="voice-recording">
-            <h2>Voice Recording</h2>
-            <button id="startRecord">Start Recording</button>
-            <button id="stopRecord" disabled>Stop Recording</button>
-            <button id="playRecord" disabled>Play Recording</button>
-            <br><br>
-            <audio id="audioPlayer" controls></audio>
-        </section>
-
-        <section id="chat">
-            <h2>ChatGPT Integration</h2>
-            <div id="chatContainer">
-                <div id="chatMessages"></div>
-                <input type="text" id="userInput" placeholder="Type your message here...">
-                <button id="sendBtn">Send</button>
-            </div>
-        </section>
-
+       
     </main>
 
     <footer>
@@ -72,97 +28,7 @@
     </footer>
 
     <script>
-        const chatMessages = document.getElementById('chatMessages');
-        const userInput = document.getElementById('userInput');
-        const sendBtn = document.getElementById('sendBtn');
-
-        sendBtn.addEventListener('click', sendMessage);
-
-        userInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                sendMessage();
-            }
-        });
-
-        function sendMessage() {
-            const prompt = userInput.value;
-            if (!prompt) return;
-
-            appendMessage(`You: ${prompt}`, 'user');
-            userInput.value = '';
-
-            fetch('https://fk5ufr1qoi.execute-api.ap-southeast-2.amazonaws.com/dev/ask', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt })
-            })
-            .then(response => response.json())
-            .then(data => {
-                appendMessage(`ChatGPT: ${data.response}`, 'bot');
-            })
-            .catch(err => {
-                console.error('Error:', err);
-                appendMessage('Error fetching response.', 'bot');
-            });
-        }
-
-        function appendMessage(message, type) {
-            const messageDiv = document.createElement('div');
-            messageDiv.textContent = message;
-            messageDiv.className = type;
-            chatMessages.appendChild(messageDiv);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        }
-    </script>
-
-    <script src="https://sdk.amazonaws.com/js/aws-sdk-2.947.0.min.js"></script>
-    <script>
-        AWS.config.update({
-            region: 'ap-southeast-2',
-            credentials: new AWS.CognitoIdentityCredentials({
-                IdentityPoolId: 'ap-southeast-2:e1961e14-083d-4200-bb2b-c869a5ffbc3d'
-            })
-        });
-
-        const s3 = new AWS.S3();
-        const startRecordBtn = document.getElementById('startRecord');
-        const stopRecordBtn = document.getElementById('stopRecord');
-        const playRecordBtn = document.getElementById('playRecord');
-        const audioPlayer = document.getElementById('audioPlayer');
-        let mediaRecorder;
-        let audioChunks = [];
-
-        startRecordBtn.addEventListener('click', () => {
-            audioChunks = [];
-            navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
-                mediaRecorder = new MediaRecorder(stream);
-                mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-                mediaRecorder.onstop = () => {
-                    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-                    audioPlayer.src = URL.createObjectURL(audioBlob);
-                    uploadAudio(audioBlob);
-                };
-                mediaRecorder.start();
-                startRecordBtn.disabled = true;
-                stopRecordBtn.disabled = false;
-                playRecordBtn.disabled = true;
-            });
-        });
-
-        stopRecordBtn.onclick = () => mediaRecorder.stop();
-        playRecordBtn.onclick = () => audioPlayer.play();
-
-        function uploadAudio(audioBlob) {
-            s3.upload({
-                Bucket: 'pm-chatgpt-test',
-                Key: 'audio/latest-recording.wav',
-                Body: audioBlob,
-                ContentType: 'audio/wav'
-            }, (err, data) => {
-                if (err) console.error('Upload Error:', err);
-                else console.log('Uploaded successfully:', data);
-            });
-        }
+    
     </script>
 </body>
 </html>
