@@ -4,10 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dr-Inovates</title>
-    <link rel="stylesheet" href="styles.css"> <!-- Link to the CSS file -->
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <!-- Header Section -->
     <header>
         <img src="pic1.jpeg" alt="Dr-Inovates Logo" style="width: 100%; height: auto;">
         <nav>
@@ -20,7 +19,6 @@
         </nav>
     </header>
 
-    <!-- Main Content Section -->
     <main>
         <section id="home">
             <h1>Welcome to Dr-Inovates</h1>
@@ -49,33 +47,80 @@
             </form>
         </section>
 
-        <!-- Voice Recording Section -->
         <section id="voice-recording">
             <h2>Voice Recording</h2>
             <button id="startRecord">Start Recording</button>
             <button id="stopRecord" disabled>Stop Recording</button>
             <button id="playRecord" disabled>Play Recording</button>
-           
             <br><br>
             <audio id="audioPlayer" controls></audio>
         </section>
 
-       
+        <section id="chat">
+            <h2>ChatGPT Integration</h2>
+            <div id="chatContainer">
+                <div id="chatMessages"></div>
+                <input type="text" id="userInput" placeholder="Type your message here...">
+                <button id="sendBtn">Send</button>
+            </div>
+        </section>
+
     </main>
 
-    <!-- Footer Section -->
     <footer>
         <p>&copy; 2025 Dr-Inovates. All rights reserved.</p>
     </footer>
 
-    <!-- AWS SDK & Voice Recording Script -->
+    <script>
+        const chatMessages = document.getElementById('chatMessages');
+        const userInput = document.getElementById('userInput');
+        const sendBtn = document.getElementById('sendBtn');
+
+        sendBtn.addEventListener('click', sendMessage);
+
+        userInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        function sendMessage() {
+            const prompt = userInput.value;
+            if (!prompt) return;
+
+            appendMessage(`You: ${prompt}`, 'user');
+            userInput.value = '';
+
+            fetch('https://fk5ufr1qoi.execute-api.ap-southeast-2.amazonaws.com/dev/ask', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt })
+            })
+            .then(response => response.json())
+            .then(data => {
+                appendMessage(`ChatGPT: ${data.response}`, 'bot');
+            })
+            .catch(err => {
+                console.error('Error:', err);
+                appendMessage('Error fetching response.', 'bot');
+            });
+        }
+
+        function appendMessage(message, type) {
+            const messageDiv = document.createElement('div');
+            messageDiv.textContent = message;
+            messageDiv.className = type;
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+    </script>
+
     <script src="https://sdk.amazonaws.com/js/aws-sdk-2.947.0.min.js"></script>
     <script>
-        // AWS Configuration - Replace with your AWS settings
         AWS.config.update({
-            region: 'ap-southeast-2', // Replace with your AWS region
+            region: 'ap-southeast-2',
             credentials: new AWS.CognitoIdentityCredentials({
-                IdentityPoolId: 'ap-southeast-2:e1961e14-083d-4200-bb2b-c869a5ffbc3d'  // Replace with your Cognito Identity Pool ID
+                IdentityPoolId: 'ap-southeast-2:e1961e14-083d-4200-bb2b-c869a5ffbc3d'
             })
         });
 
@@ -87,68 +132,35 @@
         let mediaRecorder;
         let audioChunks = [];
 
-        // Start Recording
         startRecordBtn.addEventListener('click', () => {
-            // Clear previous recording chunks
             audioChunks = [];
-            
-            navigator.mediaDevices.getUserMedia({ audio: true })
-                .then(stream => {
-                    mediaRecorder = new MediaRecorder(stream);
-                    mediaRecorder.ondataavailable = event => {
-                        audioChunks.push(event.data);
-                    };
-                    mediaRecorder.onstop = () => {
-                        const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-                        const audioUrl = URL.createObjectURL(audioBlob);
-                        audioPlayer.src = audioUrl;
-
-                        // Upload to Amazon S3 after recording stops (this will overwrite the previous file)
-                        uploadAudioToS3(audioBlob);
-                    };
-                    mediaRecorder.start();
-                    startRecordBtn.disabled = true;
-                    stopRecordBtn.disabled = false;
-                    playRecordBtn.disabled = true;
-                   
-                })
-                .catch(error => {
-                    console.error('Error accessing the microphone:', error);
-                });
+            navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+                mediaRecorder = new MediaRecorder(stream);
+                mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+                mediaRecorder.onstop = () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                    audioPlayer.src = URL.createObjectURL(audioBlob);
+                    uploadAudio(audioBlob);
+                };
+                mediaRecorder.start();
+                startRecordBtn.disabled = true;
+                stopRecordBtn.disabled = false;
+                playRecordBtn.disabled = true;
+            });
         });
 
-        // Stop Recording
-            stopRecordBtn.addEventListener('click', () => {
-            mediaRecorder.stop();
-            startRecordBtn.disabled = false;
-            stopRecordBtn.disabled = true;
-            playRecordBtn.disabled = false;
-           
-        });
+        stopRecordBtn.onclick = () => mediaRecorder.stop();
+        playRecordBtn.onclick = () => audioPlayer.play();
 
-        // Play the Recorded Audio
-        playRecordBtn.addEventListener('click', () => {
-            audioPlayer.play();
-        });
-
-        // Upload the recorded audio to Amazon S3 with the same filename each time (overwrite previous file)
-        function uploadAudioToS3(audioBlob) {
-            const params = {
-                Bucket: 'pm-chatgpt-test',  // Your S3 bucket name
-                Key: 'audio/latest-recording.wav', // Fixed file name to replace the previous recording
+        function uploadAudio(audioBlob) {
+            s3.upload({
+                Bucket: 'pm-chatgpt-test',
+                Key: 'audio/latest-recording.wav',
                 Body: audioBlob,
-                ContentType: 'audio/wav',
-            };
-
-            console.log("Uploading to S3..."); // Add logging to track the upload process
-
-            s3.upload(params, function(err, data) {
-                if (err) {
-                    console.log('Error uploading file:', err);
-                } else {
-                    console.log('File uploaded successfully:', data);
-                    alert('Audio uploaded to S3 successfully!');
-                }
+                ContentType: 'audio/wav'
+            }, (err, data) => {
+                if (err) console.error('Upload Error:', err);
+                else console.log('Uploaded successfully:', data);
             });
         }
     </script>
