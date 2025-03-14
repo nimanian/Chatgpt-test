@@ -22,11 +22,12 @@
     <main>
         <section id="chat">
             <h2>Dr-Inovates Chatbot</h2>
-            <div id="chat-box"></div>
+            <div id="chat-box">
+                <div class="message bot"><strong>Bot:</strong> Hello! How can I help you today?</div>
+            </div>
             <input type="text" id="user-input" placeholder="Type your message here...">
             <button id="send-btn">Send</button>
         </section>
-    </main>
     </main>
 
     <footer>
@@ -34,47 +35,40 @@
     </footer>
 
     <script>
-        
         document.getElementById('send-btn').addEventListener('click', sendMessage);
         document.getElementById('user-input').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') sendMessage();
         });
-        
+
         async function sendMessage() {
             const inputField = document.getElementById('user-input');
             const chatBox = document.getElementById('chat-box');
             const userMessage = inputField.value;
-        
+
             if (!userMessage) return;
-        
-            // Display user message
+
             chatBox.innerHTML += `<div class="message user"><strong>You:</strong> ${userMessage}</div>`;
             chatBox.scrollTop = chatBox.scrollHeight;
-        
+
             inputField.value = '';
-        
-            // Send request to your API Gateway endpoint
+
             try {
                 const response = await fetch('https://fk5ufr1qoi.execute-api.ap-southeast-2.amazonaws.com/dev/ask', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ prompt: userMessage })
                 });
-        
+
                 const data = await response.json();
-        
-                // Display bot response
+
                 chatBox.innerHTML += `<div class="message bot"><strong>Bot:</strong> ${data.response}</div>`;
                 chatBox.scrollTop = chatBox.scrollHeight;
-        
+
             } catch (error) {
                 console.error('Error:', error);
                 chatBox.innerHTML += `<div class="message bot"><strong>Bot:</strong> Sorry, there was an error processing your request.</div>`;
             }
         }
-        
     </script>
 </body>
 </html>
